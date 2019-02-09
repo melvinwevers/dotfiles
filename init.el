@@ -205,16 +205,47 @@
   (add-to-list 'company-frontends 'company-tng-frontend)
   :bind (("TAB" . 'company-indent-or-complete-common)))
 
+(use-package langtool
+  :defer 1
+  :config
+  ;; install with `brew install languagetool`
+  (setq langtool-language-tool-server-jar "/usr/local/Cellar/languagetool/4.4/libexec/languagetool-server.jar")
+  (setq langtool-java-bin "/usr/bin/java")
+  (setq langtool-default-language "en-US")
 
-(setq langtool-language-tool-jar "~/LanguageTool-4.4/languagetool-commandline.jar")
-(require 'langtool)
-(setq langtool-java-bin "/usr/bin/java")
+  (defhydra hydra-langtool (:color pink
+                            :hint nil)
+"
+_i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
+"
+      ("n"  langtool-goto-next-error)
+      ("p"  langtool-goto-previous-error)
+      ("i"  langtool-check)
+      ("c"  langtool-correct-buffer)
+      ("d"  langtool-check-done :color blue :exit t)))
 
-(global-set-key "\C-x4w" 'langtool-check)
-(global-set-key "\C-x4W" 'langtool-check-done)
-(global-set-key "\C-x4l" 'langtool-switch-default-language)
-(global-set-key "\C-x44" 'langtool-show-message-at-point)
-(global-set-key "\C-x4c" 'langtool-correct-buffer)
+
+; (setq langtool-language-tool-jar "~/LanguageTool-4.4/languagetool-commandline.jar")
+
+; (setq langtool-java-bin "/usr/bin/java")
+; (setq langtool-default-language "en-US")
+; (require 'langtool)
+; (defhydra hydra-langtool (:color pink
+;                             :hint nil)
+; "
+; _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
+; "
+;       ("n"  langtool-goto-next-error)
+;       ("p"  langtool-goto-previous-error)
+;       ("i"  langtool-check)
+;       ("c"  langtool-correct-buffer)
+;       ("d"  langtool-check-done :color blue :exit t)))
+
+; (global-set-key "\C-x4w" 'langtool-check)
+; (global-set-key "\C-x4W" 'langtool-check-done)
+; (global-set-key "\C-x4l" 'langtool-switch-default-language)
+; (global-set-key "\C-x44" 'langtool-show-message-at-point)
+; (global-set-key "\C-x4c" 'langtool-correct-buffer)
 
 (elpy-enable)
 
@@ -231,8 +262,8 @@
     (eldoc-add-command-completions "python-indent-dedent-line-backspace")
 ;    ; only use bare minimum of modules. No need for all fancy stuff
 ;   ;(setq elpy-modules '(elpy-module-company elpy-module-eldoc))
-;    ;(setq python-shell-interpreter "ipython"
-;    ;      python-shell-interpreter-args "-i --simple-prompt")
+    (setq python-shell-interpreter "ipython"
+          python-shell-interpreter-args "-i --simple-prompt")
 ;   (elpy-enable)
    :bind (("M-]" . 'elpy-nav-indent-shift-right)
           ("M-[" . 'elpy-nav-indent-shift-left)))
@@ -457,11 +488,68 @@
 (setq org-agenda-show-future-repeats nil)
 (setq org-src-fontify-natively t)
 
-;; (org-babel-do-load-languages
-(setq org-babel-load-languages '((R . t)))
+(use-package ob-ipython
+  :after org)
+
+; (org-babel-do-load-languages
+(setq org-babel-load-languages '((R . t) (ipython . t)))
 (setq org-confirm-babel-evaluate nil)
+(setq org-enforce-todo-dependencies t)
+(setq org-log-done 'time)
+(setq org-log-into-drawer t)
 
 (use-package org-cliplink)
+
+(defun org-deadline-ahead (&optional pos)
+  (let* ((days (time-to-number-of-days (org-deadline-ahead-time pos)))
+         (future (if (< 0 days) "+" ""))
+         (days (fceiling days)))
+    (cond
+     ((< days 30) (format "%4s" (format "%s%dd" future days)))
+     ((< days 358) (format "%4s" (format "%s%dm" future (/ days 30))))
+     (t            " "))))
+
+(defun org-deadline-ahead-time (&optional pos)
+  (let ((stamp (org-entry-get (or pos (point)) "DEADLINE" t)))
+    (when stamp
+      (time-subtract (org-time-string-to-time
+                      (org-entry-get (or pos (point)) "DEADLINE" t))
+                     (current-time)))))
+
+;; Custom sort function, after deadline-up broke with a recent update (9.2.1)
+(defun org-compare-deadline-date (a b)
+  (let ((time-a (org-deadline-ahead-time (get-text-property 0 'org-hd-marker a)))
+        (time-b (org-deadline-ahead-time (get-text-property 0 'org-hd-marker b))))
+    (if (time-less-p time-a time-b)
+        -1
+      (if (equal time-a time-b)
+          0
+        1))))
+
+(defun org-agenda-add-overlays (&optional line)
+  (let ((inhibit-read-only t) l c
+        (buffer-invisibility-spec '(org-link)))
+    (save-excursion
+      (goto-char (if line (point-at-bol) (point-min)))
+      (while (not (eobp))
+        (let ((org-marker (get-text-property (point) 'org-marker)))
+          (when (and org-marker
+                     (null (overlays-at (point)))
+                     (not (org-entry-get org-marker "CLOSED" t))
+                     (org-entry-get org-marker "DEADLINE" t))
+            (goto-char (line-end-position))
+            (let* ((ol (make-overlay (line-beginning-position)
+                                     (line-end-position)))
+                   (days (time-to-number-of-days (org-deadline-ahead-time org-marker)))
+                   (proplist (cond
+                              ((< days 1) '(face org-warning))
+                              ((< days 5) '(face org-upcoming-deadline))
+                              ((< days 30) '(face org-scheduled)))))
+              (when proplist
+                (overlay-put ol (car proplist) (cadr proplist))))))
+        (forward-line)))))
+
+(add-hook 'org-agenda-finalize-hook 'org-agenda-add-overlays)
 
 (defun clip-link-http-or-file ()
   (interactive)
@@ -470,6 +558,11 @@
     (let ((link (read-file-name "Enter file path: "))
           (description (read-string "Description: ")))
       (org-make-link-string link description))))
+
+(use-package org-done-statistics
+  :load-path "~/.emacs.d/elisp"
+  :bind (("C-c d" . org-done-count-per-category)
+         ("C-c t" . org-done-statistics-table)))
 
 (setq org-capture-templates
       '(("t" "Todo" entry (file+headline "~/org/todo.org" "Tasks")
@@ -504,7 +597,7 @@
         (?B . (font-lock-function-name-face :weight bold))
         (?C . (font-lock-variable-name-face :weight bold)))
       org-agenda-custom-commands
-      '(("d" "Dagelijkse Takenlijst"
+      '(("d" "Daily Tasks"
          ((agenda "" ((org-agenda-overriding-header "Upcoming deadlines")
                       (org-agenda-span 7)
                       (org-agenda-time-grid nil)
@@ -528,7 +621,7 @@
 
 (setq org-agenda-files
       (mapcar (lambda (f) (concat org-directory f))
-              '("/todo.org" "/sprint.org" "/projects.org")))
+              '("/todo.org" "/projects.org")))
 
 (defvar reading-list-file "~/org/reading-list.org")
 
