@@ -189,7 +189,7 @@
 (use-package company
   :config
   (global-company-mode)
-  (setq company-global-modes '(not text-mode term-mode org-mode markdown-mode gfm-mode))
+  (setq company-global-modes '(not text-mode term-mode markdown-mode gfm-mode))
   (setq company-selection-wrap-around t
         company-show-numbers t
         company-tooltip-align-annotations t
@@ -486,7 +486,9 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
 (setq org-refile-allow-creating-parent-nodes 'confirm)
 (setq org-refile-targets '((org-agenda-files :maxlevel . 1)))
 (setq org-agenda-show-future-repeats nil)
-(setq org-src-fontify-natively t)
+(setq org-src-fontify-natively t
+    org-src-preserve-indentation t
+    org-src-tab-acts-natively t)
 
 (use-package ob-ipython
   :after org)
