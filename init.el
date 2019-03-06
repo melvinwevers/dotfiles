@@ -40,7 +40,7 @@
 (setq inhibit-startup-message t)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
-(tooltip-mode -1)
+(tooltip-mode -1) 
 (fringe-mode 16) ;; I like a little more spacing
 (setq frame-title-format "")
 (show-paren-mode t)
@@ -123,6 +123,10 @@
 (setq version-control t)
 (setq create-lockfiles nil)
 
+;;pomodoro
+(setq org-pomodoro-audio-player "mplayer")
+(setq org-pomodoro-finished-sound-args "-volume 0.3")
+
 ;; scrolling
 (setq scroll-preserve-screen-position t
       scroll-margin 0
@@ -178,7 +182,13 @@
   (smartparens-global-mode))
 
 (use-package gruvbox-theme
-  :config (load-theme 'gruvbox-dark-hard t))
+  :config (load-theme 'gruvbox-dark-medium t))
+
+(add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
+;(load-theme 'solarized t)
+;; set dark theme
+;(color-theme-solarized-dark)
+
 
 (use-package minions
   :config (minions-mode 1))
@@ -362,8 +372,8 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
   :bind*
   ("C-c C-r" . ivy-bibtex)
   :config
-  (setq bibtex-completion-bibliography "~/org/bibliography.bib")
-  (setq bibtex-completion-notes-path "~/org/reading-notes.org")
+  (setq bibtex-completion-bibliography "~/Dropbox/org/bibliography.bib")
+  (setq bibtex-completion-notes-path "~/Dropbox/org/reading-notes.org")
   (setq ivy-bibtex-default-action #'ivy-bibtex-insert-citation)
   (setq bibtex-completion-display-formats '((t . "${author:36} ${title:*} ${year:4} ${=type=:7}")))
   (setf (alist-get 'org-mode bibtex-completion-format-citation-functions)
@@ -470,7 +480,7 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
   :config
   (setq org-fancy-priorities-list '("HIGH" "MID" "LOW")))
 
-(setq org-directory "~/org")
+(setq org-directory "~/Dropbox/org")
 (setq org-default-notes-file (concat org-directory "/notes.org"))
 ;; (define-key global-map "\C-cc" 'org-capture)
 (define-key global-map "\C-ca" 'org-agenda)
@@ -567,22 +577,22 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
          ("C-c t" . org-done-statistics-table)))
 
 (setq org-capture-templates
-      '(("t" "Todo" entry (file+headline "~/org/todo.org" "Tasks")
+      '(("t" "Todo" entry (file+headline "~/Dropbox/org/todo.org" "Tasks")
          "* TODO %^{Todo} %^G \n:PROPERTIES:\n:CREATED: %U\n:END:\n\n  %?"
          :empty-lines 1)
-        ("i" "Idee" entry (file+olp+datetree "~/org/ideas.org")
+        ("i" "Idee" entry (file+olp+datetree "~/Dropbox/org/ideas.org")
          "* Idee: %^{Title} %^g\n\n  %?"
          :empty-lines 1)
-        ("Q" "Quote" entry (file+headline "~/org/quotes.org" "Quotes")
+        ("Q" "Quote" entry (file+headline "~/Dropbox/org/quotes.org" "Quotes")
          "* %^{Title} %^G \n:PROPERTIES:\n:CREATED: %U\n:END:\n\n#+BEGIN_QUOTE\n%i\n#+END_QUOTE\n\n  %?"
          :empty-lines 1)
-        ("r" "Read" entry (file+headline "~/org/reading-list.org" "Reading List")
+        ("r" "Read" entry (file+headline "~/Dropbox/org/reading-list.org" "Reading List")
          "* TODO %(clip-link-http-or-file)\n:PROPERTIES:\n:CREATED: %U\n:END:\n\n  %?"
          :empty-lines 1)
-        ("n" "Note" entry (file+headline "~/org/notes.org" "Notes")
+        ("n" "Note" entry (file+headline "~/Dropbox/org/notes.org" "Notes")
          "* %^{Title} %^G \n:PROPERTIES:\n:CREATED: %U\n:END:\n\n  %?"
          :empty-lines 1)
-        ("l" "Link" entry (file+headline "~/org/bookmarks.org" "Bookmarks")
+        ("l" "Link" entry (file+headline "~/Dropbox/org/bookmarks.org" "Bookmarks")
          "* %(org-cliplink-capture) %^g \n:PROPERTIES:\n:CREATED: %U\n:END:\n\n  %?"
          :empty-lines 1)))
 
@@ -611,7 +621,7 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
                  (org-agenda-sorting-strategy (quote ((agenda time-up priority-down))))))
           (todo "NEXT"
                 ((org-agenda-overriding-header "Reading List")
-                 (org-agenda-files '("~/org/reading-list.org"))))
+                 (org-agenda-files '("~/Dropbox/org/reading-list.org"))))
           (todo "WAITING|CANCEllED"
                 ((org-agenda-overriding-header "Pending Tasks")
                  (org-agenda-sorting-strategy (quote ((agenda time-up priority-down))))))
@@ -625,7 +635,7 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
       (mapcar (lambda (f) (concat org-directory f))
               '("/todo.org" "/projects.org")))
 
-(defvar reading-list-file "~/org/reading-list.org")
+(defvar reading-list-file "~/Dropbox/org/reading-list.org")
 
 (defun update-reading-list-todo ()
   (with-current-buffer (find-file-noselect reading-list-file)
@@ -644,7 +654,7 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
 (defun counsel-find-org-file ()
   (interactive)
   (let ((file-list (seq-filter (lambda (f) (s-suffix? ".org" f))
-                               (directory-files "~/org"))))
+                               (directory-files "~/Dropbox/org"))))
     (ivy-read "org files: " file-list
               :require-match nil
               :action (lambda (f) (find-file (concat org-directory "/" f)))
