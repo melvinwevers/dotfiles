@@ -15,6 +15,7 @@
     elpy
     flycheck
     py-autopep8
+    ein
     ))
 
 (mapc #'(lambda (package)
@@ -49,6 +50,7 @@
 (show-paren-mode t)
 (blink-cursor-mode -1)
 (save-place-mode 1)
+(global-linum-mode t) ;; enable lines globally
 (global-hl-line-mode 1)
 
 ;; Changes all yes/no questions to y/n type
@@ -198,7 +200,6 @@
 
 (use-package rainbow-delimiters
   :config (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
-
 (use-package company
   :config
   (global-company-mode)
@@ -261,6 +262,15 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
 ; (global-set-key "\C-x4c" 'langtool-correct-buffer)
 
 (elpy-enable)
+    :bind (("M-]" . 'elpy-nav-indent-shift-right)
+           ("M-[" . 'elpy-nav-indent-shift-left)))
+
+(setq python-shell-interpreter "ipython"
+      python-shell-interpreter-args "-i")
+
+
+(add-hook 'python-mode-hook 'jedi:setup)
+; (set q jedi:complete-on-dot t)
 
 (when (require 'flycheck nil t)
   (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
@@ -269,17 +279,17 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
 (require 'py-autopep8)
 (add-hook 'elpy-mode-hook 'py-autopep8-enable-on-save)
 
-(use-package elpy
-    :config
-    (eldoc-add-command-completions "company-")
-    (eldoc-add-command-completions "python-indent-dedent-line-backspace")
-;    ; only use bare minimum of modules. No need for all fancy stuff
-;   ;(setq elpy-modules '(elpy-module-company elpy-module-eldoc))
-    (setq python-shell-interpreter "ipython"
-          python-shell-interpreter-args "-i --simple-prompt")
-;   (elpy-enable)
-   :bind (("M-]" . 'elpy-nav-indent-shift-right)
-          ("M-[" . 'elpy-nav-indent-shift-left)))
+;; (use-package elpy
+;;     :config
+;;     (eldoc-add-command-completions "company-")
+;;     (eldoc-add-command-completions "python-indent-dedent-line-backspace")
+;; ;    ; only use bare minimum of modules. No need for all fancy stuff
+;; ;   ;(setq elpy-modules '(elpy-module-company elpy-module-eldoc))
+;;     (setq python-shell-interpreter "ipython"
+;;           python-shell-interpreter-args "-i --simple-prompt")
+;; ;   (elpy-enable)
+;;    :bind (("M-]" . 'elpy-nav-indent-shift-right)
+;;           ("M-[" . 'elpy-nav-indent-shift-left)))
 
 
 
