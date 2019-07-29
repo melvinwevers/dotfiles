@@ -7,6 +7,8 @@
 ;; (add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/") t)
 (package-initialize)
 
+(when (memq window-system '(mac ns x))
+  (exec-path-from-shell-initialize))
 
 (defvar myPackages
   '(better-defaults
@@ -35,6 +37,7 @@
 (setq use-package-always-ensure t)
 (require 'diminish)
 (require 'bind-key)
+(require 'rg)
 
 
 (setq inhibit-startup-message t)
