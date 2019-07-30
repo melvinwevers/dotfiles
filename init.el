@@ -13,7 +13,9 @@
 (defvar myPackages
   '(better-defaults
     elpy
+    polymode
     flycheck
+    jedi
     py-autopep8
     ein
     ))
@@ -50,7 +52,8 @@
 (show-paren-mode t)
 (blink-cursor-mode -1)
 (save-place-mode 1)
-(global-linum-mode t) ;; enable lines globally
+;;(add-hook 'prog-mode-hook 'linum-mode)
+;;(global-linum-mode t) ;; enable lines globally
 (global-hl-line-mode 1)
 
 ;; Changes all yes/no questions to y/n type
@@ -261,14 +264,17 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
 ; (global-set-key "\C-x44" 'langtool-show-message-at-point)
 ; (global-set-key "\C-x4c" 'langtool-correct-buffer)
 
-(elpy-enable)
-    :bind (("M-]" . 'elpy-nav-indent-shift-right)
+(use-package elpy
+     :config
+     :bind (("M-]" . 'elpy-nav-indent-shift-right)
            ("M-[" . 'elpy-nav-indent-shift-left)))
+
+(elpy-enable)
 
 (setq python-shell-interpreter "ipython"
       python-shell-interpreter-args "-i")
 
-
+(require 'jedi)
 (add-hook 'python-mode-hook 'jedi:setup)
 ; (set q jedi:complete-on-dot t)
 
