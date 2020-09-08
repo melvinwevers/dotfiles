@@ -1,99 +1,102 @@
-;;; -*- lexical-binding: t -*-
-;;; init.el --- This is where all emacs start.
+;; .emacs.d/init.el
 
 (require 'package)
+
 (add-to-list 'package-archives
-             '("melpa" . "https://melpa.org/packages/"))
-;; (add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/") t)
+             '("melpa" . "http://melpa.org/packages/") t)
+
 (package-initialize)
+(when (not package-archive-contents)
+  (package-refresh-contents))
 
 (when (memq window-system '(mac ns x))
   (exec-path-from-shell-initialize))
 
 (defvar myPackages
-  '(better-defaults
+  '(better-defaults                 ;; Set up some better Emacs defaults
     elpy
-    polymode
     flycheck
-    jedi
     py-autopep8
+    blacken
     ein
-    ))
+    magit
+    material-theme                  ;; Theme
+    )
+  )
 
 (mapc #'(lambda (package)
-    (unless (package-installed-p package)
-      (package-install package)))
+          (unless (package-installed-p package)
+            (package-install package)))
       myPackages)
 
-(setq default-frame-alist '((ns-transparent-titlebar . t) (ns-appearance . 'nil)
-                            (font . "-*-Fira Code-light-normal-normal-*-12-*-*-*-m-0-iso10646-1")
-                            (height . 45) (width . 150)))
+;; ===================
+;; Basic Customization
+;; ===================
 
-(when (memq window-system '(mac ns x))
-  (exec-path-from-shell-initialize))
-
-(customize-set-variable 'tramp-default-user "melvin")
-(setenv "LANG" "en_US.UTF-8")
-
-(eval-when-compile
-  (require 'use-package))
-(setq use-package-always-ensure t)
-(require 'diminish)
-(require 'bind-key)
-(require 'rg)
-
-
-(setq inhibit-startup-message t)
+(setq inhibit-startup-message t)    ;; Hide the startup message
+(load-theme 'material t)            ;; Load material theme
+(global-linum-mode t)               ;; Enable line numbers globally
 (tool-bar-mode -1)
-(scroll-bar-mode -1)
-(tooltip-mode -1) 
-(fringe-mode 16) ;; I like a little more spacing
+(toggle-scroll-bar -1)
+(tooltip-mode -1)
+(fringe-mode 16)
+
 (setq frame-title-format "")
 (show-paren-mode t)
 (blink-cursor-mode -1)
 (save-place-mode 1)
-;;(add-hook 'prog-mode-hook 'linum-mode)
-;;(global-linum-mode t) ;; enable lines globally
-(global-hl-line-mode 1)
+(show-paren-mode t)
+
+(setq default-frame-alist '((ns-transparent-titlebar . t) (ns-appearance . 'nil)
+                            (font . "-*-Fira Code-light-normal-normal-*-12-*-*-*-m-0-iso10646-1")
+                            (height . 45) (width . 150)))
 
 ;; Changes all yes/no questions to y/n type
 (fset 'yes-or-no-p 'y-or-n-p)
 ;; warn only for files larger than 100mb
 (setq large-file-warning-threshold 100000000)
 
-(setq-default indent-tabs-mode nil)
-(setq default-tab-width 4)
-(setq tab-width 4)
-(setq-default fill-column 90)
-(prefer-coding-system 'utf-8)
-(add-hook 'dired-mode-hook
-          (lambda ()
-            (dired-hide-details-mode 1)))
+(customize-set-variable 'tramp-default-user "melvin")
+(setenv "LANG" "en_US.UTF-8")
 
-(setq insert-directory-program "gls" dired-use-ls-dired t)
+(defun stop-using-minibuffer ()
+  "kill the minibuffer"
+  (when (and (>= (recursion-depth) 1) (active-minibuffer-window))
+    (abort-recursive-edit)))
 
-;; Nice to viewing but not opening files in Dired
-(use-package peep-dired
-  :defer t
-  :bind (:map dired-mode-map ("P" . peep-dired)))
 
-(use-package async
-  :config (setq async-bytecomp-package-mode 1))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   (quote
-    (minions async peep-dired use-package exec-path-from-shell diminish)))
- '(tramp-default-user "melvin" t))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+;; ==================
+;; minibuffer setup
+;; =================
+
+;; Enable Elpy
+(use-package elpy
+     :config
+     :bind (("M-]" . 'elpy-nav-indent-shift-right)
+           ("M-[" . 'elpy-nav-indent-shift-left)))
+(elpy-enable)
+
+;; Use IPython for REPL
+
+(setq python-shell-interpreter "jupyter"
+      python-shell-interpreter-args "console --simple-prompt"
+      python-shell-prompt-detect-failure-warning nil)
+(add-to-list 'python-shell-completion-native-disabled-interpreters
+             "jupyter")
+
+;; Enable Flycheck
+(when (require 'flycheck nil t)
+  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
+  (add-hook 'elpy-mode-hook 'flycheck-mode))
+
+;; Enable autopep8
+(require 'py-autopep8)
+(eval-when-compile
+  (require 'use-package))
+(setq use-package-always-ensure t)
+(require 'diminish)
+(require 'bind-key)
+(require 'rg)
 
 ;; Stolen from somewhere. There should be a more robust way of doing this.
 (defun comment-current-line-dwim ()
@@ -140,23 +143,8 @@
       scroll-margin 0
       scroll-conservatively 101)
 
-(defun new-scratch-pad ()
-  (interactive)
-  (let ((buffer (generate-new-buffer "org-scratch")))
-    (switch-to-buffer buffer)
-    (setq buffer-offer-save t)
-    (org-mode)
-    buffer))
-
-(global-set-key (kbd "C-c s") 'new-scratch-pad)
-
 (use-package move-text
   :config (move-text-default-bindings))
-
-(use-package paradox
-  :config
-  (setq paradox-execute-asynchronously t)
-  (paradox-enable))
 
 (use-package tex
   :defer t
@@ -169,40 +157,19 @@
           ;; Don't insert line-break at inline math
           LaTeX-fill-break-at-separators nil)))
 
+(use-package magic-latex-buffer
+  :defer t
+  :hook (LaTeX-mode . magic-latex-buffer))
+
 (use-package auctex-latexmk
   :init
   (progn
     (setq auctex-latexmk-inherit-TeX-PDF-mode t)
     :config (auctex-latexmk-setup)))
 
-(use-package flyspell-correct-ivy
-  :config
-  (setq-default ispell-program-name "hunspell")
-  (setq ispell-really-hunspell t)
-  (setq flyspell-default-dictionary "en_us")
-  (setenv "DICTIONARY" "en_us")
-  (define-key flyspell-mode-map (kbd "C-c s") 'flyspell-correct-previous-word-generic))
-
-(use-package smartparens
-  :diminish smartparens-mode
-  :config
-  (require 'smartparens-config)
-  (smartparens-global-mode))
-
-(use-package gruvbox-theme
-  :config (load-theme 'gruvbox-dark-medium t))
-
-(add-to-list 'custom-theme-load-path "~/.emacs.d/themes")
-;(load-theme 'solarized t)
-;; set dark theme
-;(color-theme-solarized-dark)
-
-
-(use-package minions
-  :config (minions-mode 1))
-
 (use-package rainbow-delimiters
   :config (add-hook 'prog-mode-hook #'rainbow-delimiters-mode))
+
 (use-package company
   :config
   (global-company-mode)
@@ -226,9 +193,11 @@
   :defer 1
   :config
   ;; install with `brew install languagetool`
-  (setq langtool-language-tool-server-jar "/usr/local/Cellar/languagetool/4.4/libexec/languagetool-server.jar")
+  ;(setq langtool-language-tool-server-jar "/usr/local/Cellar/languagetool/4.7/libexec/languagetool-server.jar")
+  (setq langtool-language-tool-jar "/usr/local/Cellar/languagetool/4.7/libexec/languagetool-commandline.jar")
   (setq langtool-java-bin "/usr/bin/java")
   (setq langtool-default-language "en-US")
+  ;(setq langtool-server-user-arguments '("-p" "8082"))
 
   (defhydra hydra-langtool (:color pink
                             :hint nil)
@@ -241,83 +210,6 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
       ("c"  langtool-correct-buffer)
       ("d"  langtool-check-done :color blue :exit t)))
 
-
-; (setq langtool-language-tool-jar "~/LanguageTool-4.4/languagetool-commandline.jar")
-
-; (setq langtool-java-bin "/usr/bin/java")
-; (setq langtool-default-language "en-US")
-; (require 'langtool)
-; (defhydra hydra-langtool (:color pink
-;                             :hint nil)
-; "
-; _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
-; "
-;       ("n"  langtool-goto-next-error)
-;       ("p"  langtool-goto-previous-error)
-;       ("i"  langtool-check)
-;       ("c"  langtool-correct-buffer)
-;       ("d"  langtool-check-done :color blue :exit t)))
-
-; (global-set-key "\C-x4w" 'langtool-check)
-; (global-set-key "\C-x4W" 'langtool-check-done)
-; (global-set-key "\C-x4l" 'langtool-switch-default-language)
-; (global-set-key "\C-x44" 'langtool-show-message-at-point)
-; (global-set-key "\C-x4c" 'langtool-correct-buffer)
-
-(use-package elpy
-     :config
-     :bind (("M-]" . 'elpy-nav-indent-shift-right)
-           ("M-[" . 'elpy-nav-indent-shift-left)))
-
-(elpy-enable)
-
-(setq python-shell-interpreter "ipython"
-      python-shell-interpreter-args "-i")
-
-(require 'jedi)
-(add-hook 'python-mode-hook 'jedi:setup)
-; (set q jedi:complete-on-dot t)
-
-(when (require 'flycheck nil t)
-  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
-  (add-hook 'elpy-mode-hook 'flycheck-mode))
-
-(require 'py-autopep8)
-(add-hook 'elpy-mode-hook 'py-autopep8-enable-on-save)
-
-;; (use-package elpy
-;;     :config
-;;     (eldoc-add-command-completions "company-")
-;;     (eldoc-add-command-completions "python-indent-dedent-line-backspace")
-;; ;    ; only use bare minimum of modules. No need for all fancy stuff
-;; ;   ;(setq elpy-modules '(elpy-module-company elpy-module-eldoc))
-;;     (setq python-shell-interpreter "ipython"
-;;           python-shell-interpreter-args "-i --simple-prompt")
-;; ;   (elpy-enable)
-;;    :bind (("M-]" . 'elpy-nav-indent-shift-right)
-;;           ("M-[" . 'elpy-nav-indent-shift-left)))
-
-
-
-(use-package ess)
-(setq ess-indent-level 4)
-(setq ess-arg-function-offset 4)
-(setq ess-else-offset 4)
-
-(use-package yaml-mode
-  :config
-  (add-to-list 'auto-mode-alist '("\\.yml\\'" . yaml-mode)))
-
-(use-package markdown-mode
-  :commands (markdown-mode gfm-mode)
-  :mode (("README\\.md\\'" . gfm-mode)
-         ("\\.md\\'" . gfm-mode)
-         ("\\.markdown\\'" . markdown-mode))
-  :init (setq markdown-command "pandoc")
-  :config
-  (setq visual-line-column 90)
-  (setq markdown-fontify-code-blocks-natively t)
-  (setq markdown-enable-math t))
 
 (use-package recentf
   :config
@@ -459,35 +351,6 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
          ("M-<down-mouse-1>" . mc/add-cursor-on-click)
          ("C-c m" . vr/mc-mark)))
 
-(use-package magit
-  :bind (("C-x g" . magit-status)))
-
-(use-package forge)
-
-(use-package git-gutter-fringe
-  :config
-  (setq-default fringes-outside-margins t)
-  ;; thin fringe bitmaps
-  (fringe-helper-define 'git-gutter-fr:added '(center repeated)
-    "XXX.....")
-  (fringe-helper-define 'git-gutter-fr:modified '(center repeated)
-    "XXX.....")
-  (fringe-helper-define 'git-gutter-fr:deleted 'bottom
-    "X......."
-    "XX......"
-    "XXX....."
-    "XXXX....")
-  (set-face-attribute
-   'git-gutter:added nil :background nil)
-  (set-face-attribute
-   'git-gutter:deleted nil :background nil)
-  (set-face-attribute
-   'git-gutter:modified nil :background nil)
-  (add-hook 'text-mode-hook #'git-gutter-mode)
-  (add-hook 'prog-mode-hook #'git-gutter-mode)
-  (add-hook 'conf-mode #'git-gutter-mode))
-
-(use-package all-the-icons)
 
 ;; org configuration
 (use-package org-bullets
@@ -522,8 +385,10 @@ _i_nit  /  _c_orrect  /  _n_ext error  /  _p_rev error  /  _d_one
 (use-package ob-ipython
   :after org)
 
+(org-babel-do-load-languages
+ 'org-babel-load-languages '((R . t)))
 ; (org-babel-do-load-languages
-(setq org-babel-load-languages '((R . t) (ipython . t)))
+;  'org-babel-load-languages '((R . t) (ipython . t)))
 (setq org-confirm-babel-evaluate nil)
 (setq org-enforce-todo-dependencies t)
 (setq org-log-done 'time)
@@ -880,8 +745,6 @@ _p_rev       _u_pper              _=_: upper/lower       _r_esolve
 
 (use-package visual-regexp-steroids
   :after visual-regexp)
-
-(use-package restclient)
 
 (use-package server
   :config
